@@ -165,20 +165,12 @@ class _UploadState extends State<Upload> {
                             builder: (context, selectedImage, child) {
                               return GestureDetector(
                                 onTap: () => _showBottomSheet(context),
-                                child: Container(
-                                  width: double.infinity,
-                                  height: 350,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    image: selectedImage != null
-                                        ? DecorationImage(
-                                      image: FileImage(selectedImage),
-                                      fit: BoxFit.cover,
-                                    )
-                                        : null,
-                                  ),
+                                child: CircleAvatar(
+                                  radius: 30,
+                                  backgroundColor: Colors.blue.shade800,
+                                  backgroundImage: selectedImage != null ? FileImage(selectedImage) : null,
                                   child: selectedImage == null
-                                      ? const Icon(Icons.add, color: Colors.blue, size: 50)
+                                      ? const Icon(Icons.add, color: Colors.white, size: 50)
                                       : null,
                                 ),
                               );
@@ -193,23 +185,25 @@ class _UploadState extends State<Upload> {
                           return permissionsDenied
                               ? Card(
                             elevation: 2,
-                                child: Container(
-                                  padding: EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
+                            child: Container(
+                              padding: EdgeInsets.all(15),
+                              width: double.infinity,
+                              decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text("Error!",style: TextStyle(fontWeight: FontWeight.bold,color: Colors.red),),
                                   Text(
-                                    "Please the enable camera permission ",
+                                    "Error!",
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
                                   ),
+                                  Text("Please enable camera permission"),
                                 ],
-                                  ),
-                                ),
-                              )
+                              ),
+                            ),
+                          )
                               : const SizedBox();
                         },
                       ),

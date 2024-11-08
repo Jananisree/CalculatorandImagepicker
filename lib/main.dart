@@ -10,7 +10,7 @@ void main() {
   ]); // Locks the app to portrait mode
 
   runApp(
-   const MyApp(),
+    const MyApp(), // Your app widget
   );
 }
 
@@ -24,8 +24,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: MyBottomNavApp(), // Your custom bottom navigation app
-      debugShowCheckedModeBanner: false, // Disables the debug banner
+      home: MyBottomNavApp(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
