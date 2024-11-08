@@ -4,21 +4,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:io';
 import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: const Upload(),
-    );
-  }
-}
-
 class Upload extends StatefulWidget {
   const Upload({super.key});
 
@@ -29,6 +14,7 @@ class Upload extends StatefulWidget {
 class _UploadState extends State<Upload> {
   final ImagePicker _picker = ImagePicker();
   final ValueNotifier<File?> _selectedImageNotifier = ValueNotifier<File?>(null);
+  final ValueNotifier<bool> _permissionsDeniedNotifier = ValueNotifier<bool>(false);
 
   @override
   void initState() {
@@ -50,21 +36,18 @@ class _UploadState extends State<Upload> {
     prefs.setString('selected_image_path', image.path);
   }
 
-  Future<void> _pickImage(ImageSource source) async {
-    if (source == ImageSource.camera) {
-      final permissionStatus = await Permission.camera.request();
-      if (!permissionStatus.isGranted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Camera permission denied")),
-        );
-        return;
-      }
-    }
+  Future<void> _checkPermissionAndPickImage(ImageSource source) async {
+    final permissionStatus = await Permission.camera.request();
 
-    final pickedFile = await _picker.pickImage(source: source);
-    if (pickedFile != null) {
-      final imageFile = File(pickedFile.path);
-      await _setImage(imageFile);
+    if (permissionStatus.isGranted) {
+      _permissionsDeniedNotifier.value = false;
+      final pickedFile = await _picker.pickImage(source: source);
+      if (pickedFile != null) {
+        final imageFile = File(pickedFile.path);
+        await _setImage(imageFile);
+      }
+    } else {
+      _permissionsDeniedNotifier.value = true;
     }
   }
 
@@ -96,7 +79,7 @@ class _UploadState extends State<Upload> {
                 title: const Text("Camera", style: TextStyle(fontWeight: FontWeight.bold)),
                 onTap: () {
                   Navigator.pop(context);
-                  _pickImage(ImageSource.camera);
+                  _checkPermissionAndPickImage(ImageSource.camera);
                 },
               ),
               const Divider(color: Colors.black12, thickness: 1),
@@ -109,7 +92,7 @@ class _UploadState extends State<Upload> {
                 title: const Text("Gallery", style: TextStyle(fontWeight: FontWeight.bold)),
                 onTap: () {
                   Navigator.pop(context);
-                  _pickImage(ImageSource.gallery);
+                  _checkPermissionAndPickImage(ImageSource.gallery);
                 },
               ),
             ],
@@ -158,84 +141,113 @@ class _UploadState extends State<Upload> {
               topRight: Radius.circular(30),
             ),
           ),
-          child: Column(
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(top: 25),
-                child: Text("Upload image", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25)),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(top: 50, left: 30, right: 30),
-                child: Column(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      height: 300,
-                      decoration: BoxDecoration(
-                        color: const Color(0xffF5F5F5),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Center(
-                        child: ValueListenableBuilder<File?>(
-                          valueListenable: _selectedImageNotifier,
-                          builder: (context, selectedImage, child) {
-                            return GestureDetector(
-                              onTap: () => _showBottomSheet(context),
-                              child: Container(
-                                width: double.infinity,
-                                height: 350,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(20),
-                                  image: selectedImage != null
-                                      ? DecorationImage(
-                                    image: FileImage(selectedImage),
-                                    fit: BoxFit.cover,
-                                  )
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 25),
+                  child: Text("Upload image", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 25)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 50, left: 30, right: 30),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: double.infinity,
+                        height: 300,
+                        decoration: BoxDecoration(
+                          color: const Color(0xffF5F5F5),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Center(
+                          child: ValueListenableBuilder<File?>(
+                            valueListenable: _selectedImageNotifier,
+                            builder: (context, selectedImage, child) {
+                              return GestureDetector(
+                                onTap: () => _showBottomSheet(context),
+                                child: Container(
+                                  width: double.infinity,
+                                  height: 350,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    image: selectedImage != null
+                                        ? DecorationImage(
+                                      image: FileImage(selectedImage),
+                                      fit: BoxFit.cover,
+                                    )
+                                        : null,
+                                  ),
+                                  child: selectedImage == null
+                                      ? const Icon(Icons.add, color: Colors.blue, size: 50)
                                       : null,
                                 ),
-                                child: selectedImage == null
-                                    ? const Icon(Icons.add, color: Colors.blue, size: 50)
-                                    : null,
-                              ),
-                            );
-                          },
+                              );
+                            },
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-                    ValueListenableBuilder<File?>(
-                      valueListenable: _selectedImageNotifier,
-                      builder: (context, selectedImage, child) {
-                        return selectedImage != null
-                            ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            InkWell(
-                              onTap: () => _showBottomSheet(context),
-                              child: CircleAvatar(
-                                radius: 30,
-                                backgroundColor: Colors.blue[800],
-                                child: Icon(Icons.mode_edit_outline_outlined,color: Colors.white,),
+                      const SizedBox(height: 55),
+                      ValueListenableBuilder<bool>(
+                        valueListenable: _permissionsDeniedNotifier,
+                        builder: (context, permissionsDenied, child) {
+                          return permissionsDenied
+                              ? Card(
+                            elevation: 2,
+                                child: Container(
+                                  padding: EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Error!",style: TextStyle(fontWeight: FontWeight.bold,color: Colors.red),),
+                                  Text(
+                                    "Please the enable camera permission ",
+                                  ),
+                                ],
+                                  ),
+                                ),
+                              )
+                              : const SizedBox();
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      ValueListenableBuilder<File?>(
+                        valueListenable: _selectedImageNotifier,
+                        builder: (context, selectedImage, child) {
+                          return selectedImage != null
+                              ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              InkWell(
+                                onTap: () => _showBottomSheet(context),
+                                child: CircleAvatar(
+                                  radius: 30,
+                                  backgroundColor: Colors.blue[800],
+                                  child: Icon(Icons.mode_edit_outline_outlined, color: Colors.white),
+                                ),
                               ),
-                            ),
-                            SizedBox(width: 20),
-                            InkWell(
-                              onTap: () => _showBottomSheet(context),
-                              child: CircleAvatar(
-                                radius: 30,
-                                backgroundColor: Colors.blue[800],
-                                child: Icon(Icons.check,color: Colors.white,),
+                              SizedBox(width: 20),
+                              InkWell(
+                                onTap: () => _showBottomSheet(context),
+                                child: CircleAvatar(
+                                  radius: 30,
+                                  backgroundColor: Colors.blue[800],
+                                  child: Icon(Icons.check, color: Colors.white),
+                                ),
                               ),
-                            ),
-                          ],
-                        )
-                            : const SizedBox();
-                      },
-                    ),
-                  ],
+                            ],
+                          )
+                              : const SizedBox();
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
